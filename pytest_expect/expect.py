@@ -96,7 +96,7 @@ class ExpectationPlugin(object):
                 self.to_mark.remove(report.nodeid)
                 for item in report.result:
                     self.to_mark.add(item.nodeid)
-        elif self.update_xfail:
+        elif not passed and self.update_xfail:
             self.fails.add(report.nodeid)
 
     def pytest_collection_modifyitems(self, session, config, items):
