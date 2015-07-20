@@ -110,7 +110,7 @@ class ExpectationPlugin(object):
             self.fails.add(report.nodeid)
 
     def pytest_sessionfinish(self, session):
-        if self.update_xfail:
+        if self.update_xfail and not hasattr(session.config, 'slaveinput'):
             expectation = _Expectations(self.fails)
             pickled = pickle.dump(expectation, fp, protocol=2)
             with open(self.xfail_file, "wb") as fp:
