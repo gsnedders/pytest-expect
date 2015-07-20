@@ -77,7 +77,7 @@ class ExpectationPlugin(object):
             for nodeid in copy.copy(self.to_mark):
                 if isinstance(nodeid, bytes):
                     try:
-                        self.to_mark.add(nodeid.encode("utf-8"))
+                        self.to_mark.add(nodeid.decode("utf-8"))
                     except UnicodeEncodeError:
                         pass
         else:
@@ -85,7 +85,7 @@ class ExpectationPlugin(object):
             for nodeid in copy.copy(self.to_mark):
                 if isinstance(nodeid, unicode):
                     try:
-                        self.to_mark.add(nodeid.decode("utf-8"))
+                        self.to_mark.add(nodeid.encode("utf-8"))
                     except UnicodeDecodeError:
                         pass
 
@@ -122,13 +122,18 @@ class _Expectations(object):
         assert isinstance(expect_xfail, set)
 
         self.version = 0x0100
-        self.py_version = 2 if PY2 else PY3
+        self.py_version = 2 if PY2 else 3
         self.expect_xfail = expect_xfail
 
     def __getstate__(self):
         return self.__dict__
 
     def __setstate__(self, state):
+        if PY3 and state[b'py_version'] == 2:
+            for key in list(state.keys()):
+                state[key.decode("ASCII")] = state[key]
+                del state[key]
+
         self.__dict__ = state
         if self.version >= 0x0200:
             raise _VersionError
