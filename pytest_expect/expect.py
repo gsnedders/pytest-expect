@@ -95,7 +95,7 @@ class ExpectationPlugin(object):
             if report.nodeid in self.to_mark:
                 self.to_mark.remove(report.nodeid)
                 for item in report.result:
-                    self.to_mark.add(item.nodeid, True)
+                    self.to_mark.add(item.nodeid)
         elif self.update_xfail:
             self.fails.add(report.nodeid)
 
