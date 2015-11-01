@@ -16,9 +16,7 @@ import pickletools
 import sys
 
 import pytest
-
-PY2 = sys.version_info[0] == 2
-PY3 = sys.version_info[0] == 3
+from six import PY2, PY3, PY34, text_type, binary_type
 
 
 def pytest_addoption(parser):
@@ -58,36 +56,20 @@ class ExpectationPlugin(object):
             try:
                 with open(self.xfail_file, "rb") as fp:
                     if PY3:
-                        expectations = pickle.load(fp, encoding="bytes")
+                        try:
+                            expectations = pickle.load(fp, encoding="bytes")
+                        except LookupError:
+                            expectations = pickle.load(fp, encoding="latin1")
                     else:
                         expectations = pickle.load(fp)
             except IOError:
                 self.to_mark = set()
             except _VersionError:
-                self.config.warn("W1", "test expectation file in unsupported version")
+                config.warn("W1", "test expectation file in unsupported version")
                 self.to_mark = set()
             else:
                 self.to_mark = expectations.expect_xfail
-                if expectations.py_version != sys.version_info[0]:
-                    self._adjust_to_mark_for_python_version()
 
-    def _adjust_to_mark_for_python_version(self):
-        """A somewhat evil hack to try and get as many node ids working Python versions"""
-        if PY3:
-            for nodeid in copy.copy(self.to_mark):
-                if isinstance(nodeid, bytes):
-                    try:
-                        self.to_mark.add(nodeid.decode("utf-8"))
-                    except UnicodeEncodeError:
-                        pass
-        else:
-            assert PY2
-            for nodeid in copy.copy(self.to_mark):
-                if isinstance(nodeid, unicode):
-                    try:
-                        self.to_mark.add(nodeid.encode("utf-8"))
-                    except UnicodeDecodeError:
-                        pass
 
     def pytest_collectreport(self, report):
         passed = report.outcome in ('passed', 'skipped')
@@ -121,22 +103,61 @@ class _Expectations(object):
     def __init__(self, expect_xfail):
         assert isinstance(expect_xfail, set)
 
-        self.version = 0x0100
         self.py_version = 2 if PY2 else 3
         self.expect_xfail = expect_xfail
 
     def __getstate__(self):
-        return self.__dict__
+        d = copy.copy(self.__dict__)
+        d["version"] = 0x0200
+        d["expect_xfail"] = new = []
+        for x in self.expect_xfail:
+            if isinstance(x, text_type):
+                new.append((b'u', x))
+            else:
+                assert isinstance(x, binary_type)
+                new.append((b'b', x))
+        return d
 
     def __setstate__(self, state):
-        if PY3 and state[b'py_version'] == 2:
+        if PY3 and b'py_version' in state:
             for key in list(state.keys()):
                 state[key.decode("ASCII")] = state[key]
                 del state[key]
 
+        version = state["version"]
+        del state["version"]
+
         self.__dict__ = state
-        if self.version >= 0x0200:
+
+        if version >= 0x0300:
             raise _VersionError
+        elif version >= 0x0200:
+            xfail = self.expect_xfail
+            self.expect_xfail = set()
+            for t, s in xfail:
+                self.expect_xfail.add(s)
+                if PY3 and self.py_version == 2 and t == b'b':
+                    if PY34:
+                        self.expect_xfail.add(s.decode('latin1'))
+                    else:
+                        try:
+                            self.expect_xfail.add(s.encode("latin1"))
+                        except UnicodeEncodeError:
+                            pass
+                elif PY2 and self.py_version == 3 and t == b'u':
+                    try:
+                        self.expect_xfail.add(s.encode("latin1"))
+                    except UnicodeEncodeError:
+                        pass
+        elif version >= 0x0100:
+            if ((PY3 and not PY34 and self.py_version == 2) or
+                (PY2 and self.py_version == 3)):
+                for x in copy.copy(self.expect_xfail):
+                    if isinstance(x, text_type):
+                        try:
+                            self.expect_xfail.add(x.encode("latin1"))
+                        except UnicodeEncodeError:
+                            pass
 
 
 class _VersionError(Exception):
