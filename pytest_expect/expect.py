@@ -23,7 +23,7 @@ def pytest_addoption(parser):
     group = parser.getgroup("general")
     group._addoption(
         '--xfail-file',
-        action="store", dest="xfail_file", default=".pytest.expect", metavar="FILE",
+        action="store", dest="xfail_file", default=None, metavar="FILE",
         help="store test expectations in FILE"
     )
 
@@ -46,9 +46,12 @@ def pytest_configure(config):
 
 class ExpectationPlugin(object):
     def __init__(self, config):
-        self.xfail_file = config.rootdir.join(config.option.xfail_file).strpath
+        self.xfail_file = config.option.xfail_file
         self.update_xfail = config.option.update_xfail
         self.warn_on_python_xfail = config.option.warn_on_python_xfail
+
+        if self.xfail_file is None:
+            self.xfail_file = config.rootdir.join(".pytest.expect").strpath
 
         if self.update_xfail:
             self.fails = set()
