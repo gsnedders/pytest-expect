@@ -26,7 +26,10 @@ setup(
     maintainer="Geoffrey Sneddon",
     maintainer_email="geoffers@gmail.com",
 
-    install_requires="pytest",
+    install_requires=[
+        "pytest",
+        "u-msgpack-python"
+    ],
     
     packages = ["pytest_expect"],
 

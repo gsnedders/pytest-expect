@@ -16,6 +16,7 @@ import pickletools
 import sys
 
 import pytest
+import umsgpack
 from six import PY2, PY3, PY34, text_type, binary_type
 
 
@@ -111,17 +112,16 @@ class _Expectations(object):
 
     def __getstate__(self):
         d = copy.copy(self.__dict__)
-        d["version"] = 0x0200
-        d["expect_xfail"] = new = []
-        for x in self.expect_xfail:
-            if isinstance(x, text_type):
-                new.append((b'u', x))
-            else:
-                assert isinstance(x, binary_type)
-                new.append((b'b', x))
-        return d
+        d["version"] = 0x0300
+        d["expect_xfail"] = list(d["expect_xfail"])
+        return umsgpack.packb(d)
 
     def __setstate__(self, state):
+        if isinstance(state, binary_type):
+            state = umsgpack.unpackb(state)
+        elif isinstance(state, text_type):
+            state = umsgpack.unpackb(state.decode('latin1'))
+
         if PY3 and b'py_version' in state:
             for key in list(state.keys()):
                 state[key.decode("ASCII")] = state[key]
@@ -132,8 +132,20 @@ class _Expectations(object):
 
         self.__dict__ = state
 
-        if version >= 0x0300:
+        if version >= 0x0400:
             raise _VersionError
+        elif version >= 0x0300:
+            xfail = self.expect_xfail
+            self.expect_xfail = set()
+            for s in xfail:
+                self.expect_xfail.add(s)
+                if PY3 and self.py_version == 2 and isinstance(s, binary_type):
+                    self.expect_xfail.add(s.decode('latin1'))
+                elif PY2 and self.py_version == 3 and isinstance(s, text_type):
+                    try:
+                        self.expect_xfail.add(s.encode("latin1"))
+                    except UnicodeEncodeError:
+                        pass
         elif version >= 0x0200:
             xfail = self.expect_xfail
             self.expect_xfail = set()
