@@ -13,7 +13,6 @@ identifiers.
 import copy
 import pickle
 import pickletools
-import sys
 
 import pytest
 import umsgpack
@@ -78,7 +77,6 @@ class ExpectationPlugin(object):
                 self.to_mark = set()
             else:
                 self.to_mark = expectations.expect_xfail
-
 
     def pytest_collectreport(self, report):
         passed = report.outcome in ('passed', 'skipped')
@@ -171,7 +169,7 @@ class _Expectations(object):
                         pass
         elif version >= 0x0100:
             if ((PY3 and not PY34 and self.py_version == 2) or
-                (PY2 and self.py_version == 3)):
+                    (PY2 and self.py_version == 3)):
                 for x in copy.copy(self.expect_xfail):
                     if isinstance(x, text_type):
                         try:
