@@ -42,18 +42,23 @@ def pytest_addoption(parser):
 
 
 def pytest_configure(config):
-    config.pluginmanager.register(ExpectationPlugin(config))
+    exp = ExpectationPlugin(config)
+    config.pluginmanager.register(exp)
+    exp.load_expectations()
 
 
 class ExpectationPlugin(object):
     def __init__(self, config):
+        self.config = config
         self.xfail_file = config.option.xfail_file
         self.update_xfail = config.option.update_xfail
         self.warn_on_python_xfail = config.option.warn_on_python_xfail
+        self.fails = set()
 
         if self.xfail_file is None:
             self.xfail_file = config.rootdir.join(".pytest.expect").strpath
 
+    def load_expectations(self):
         if self.update_xfail:
             self.fails = set()
         else:
@@ -69,7 +74,7 @@ class ExpectationPlugin(object):
             except IOError:
                 self.to_mark = set()
             except _VersionError:
-                config.warn("W1", "test expectation file in unsupported version")
+                self.config.warn("W1", "test expectation file in unsupported version")
                 self.to_mark = set()
             else:
                 self.to_mark = expectations.expect_xfail
