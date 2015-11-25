@@ -30,10 +30,10 @@ setup(
         "pytest",
         "u-msgpack-python"
     ],
-    
-    packages = ["pytest_expect"],
 
-    entry_points = {
+    packages=["pytest_expect"],
+
+    entry_points={
         'pytest11': [
             'pytest_expect = pytest_expect.expect',
         ]

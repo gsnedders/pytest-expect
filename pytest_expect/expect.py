@@ -107,7 +107,8 @@ class ExpectationPlugin(object):
             self.fails.add(report.nodeid)
 
     def pytest_sessionfinish(self, session):
-        if self.update_xfail and not hasattr(session.config, 'slaveinput'):
+        if (self.update_xfail and
+                not hasattr(session.config, 'slaveinput')):
             state = {}
             state["py_version"] = 2 if PY2 else 3
             state["version"] = 0x0100
