@@ -42,7 +42,10 @@ def pytest_configure(config):
     exp = ExpectationPlugin(config)
     config.pluginmanager.register(exp)
     if not exp.update_xfail:
-        exp.load_expectations()
+        try:
+            exp.load_expectations()
+        except:
+            self.config.warn("W1", "failed to load expectation file")
 
 
 class ExpectationPlugin(object):
