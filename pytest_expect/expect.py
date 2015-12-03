@@ -10,6 +10,8 @@ the normal Python format, as Python 2 only allows ASCII characters in
 identifiers.
 """
 
+import os.path
+
 import pytest
 import umsgpack
 from six import PY2, PY3, text_type, binary_type
@@ -56,6 +58,9 @@ class ExpectationPlugin(object):
             self.xfail_file = config.rootdir.join(".pytest.expect").strpath
 
     def load_expectations(self):
+        if not os.path.isfile(self.xfail_file):
+            return
+
         with open(self.xfail_file, "rb") as fp:
             state = umsgpack.unpack(fp)
 
