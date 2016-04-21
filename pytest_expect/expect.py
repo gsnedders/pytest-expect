@@ -49,7 +49,7 @@ def pytest_configure(config):
         try:
             exp.load_expectations()
         except:
-            self.config.warn("W1", "failed to load expectation file")
+            config.warn("W1", "failed to load expectation file")
 
 
 class ExpectationPlugin(object):
