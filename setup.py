@@ -18,7 +18,7 @@ _classifiers = [
 
 setup(
     name="pytest-expect",
-    version="1.0.1",
+    version="1.1.0",
     url="https://github.com/gsnedders/pytest-expect",
     license="MIT License",
     description="py.test plugin to store test expectations and mark tests based on them",

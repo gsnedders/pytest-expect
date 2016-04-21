@@ -10,11 +10,15 @@ the normal Python format, as Python 2 only allows ASCII characters in
 identifiers.
 """
 
+import ast
 import os.path
+import sys
 
 import pytest
 import umsgpack
 from six import PY2, PY3, text_type, binary_type
+
+_magic_file_line = b"pytest-expect file v"
 
 
 def pytest_addoption(parser):
@@ -65,7 +69,80 @@ class ExpectationPlugin(object):
             return
 
         with open(self.xfail_file, "rb") as fp:
-            state = umsgpack.unpack(fp)
+            new_type = fp.read(len(_magic_file_line)) == _magic_file_line
+            fp.seek(0)
+            if new_type:
+                self.expect_xfail = self._parse_file(fp)
+            else:
+                self.expect_xfail = self._parse_legacy_file(fp)
+
+    def _parse_file(self, fp):
+        # parse header line
+        try:
+            line = next(fp)
+            if not line.startswith(_magic_file_line):
+                raise SyntaxError("invalid pytest-expect file")
+            version = int(line[len(_magic_file_line):].rstrip())
+        except StopIteration:
+            raise SyntaxError("invalid pytest-expect file")
+
+        # parse Python version line
+        try:
+            line = next(fp)
+            if PY3:
+                line = line.decode("ascii")
+            version_info = ast.literal_eval(line)
+            major, minor, micro, releaselevel, serial = version_info
+        except (StopIteration, ValueError):
+            raise SyntaxError("invalid pytest-expect file")
+
+        # parse the actual file
+        if version == 1:
+            fails = set()
+            for line in fp:
+                if PY3:
+                    line = line.decode("ascii")
+                try:
+                    name, result = line.rsplit(":", 1)
+                except ValueError:
+                    raise SyntaxError("invalid pytest-expect file")
+                if result.strip() != "FAIL":
+                    raise SyntaxError("invalid pytest-expect file")
+                name = ast.literal_eval(name)
+                fails.add(name)
+                if PY3 and major == 2 and isinstance(name, bytes):
+                    try:
+                        fails.add(name.decode("latin1"))
+                    except UnicodeDecodeError:
+                        pass
+                if PY2 and major == 3 and isinstance(name, unicode):
+                    try:
+                        fails.add(name.encode("latin1"))
+                    except UnicodeEncodeError:
+                        pass
+            return fails
+        else:
+            raise SyntaxError("unknown pytest-expect file version")
+
+    def _raw_make_file(self, fails):
+        yield _magic_file_line + b"1\n"
+        yield repr(tuple(sys.version_info)) + "\n"
+        for fail in sorted(fails):
+            r = repr(fail)
+            if PY2 and isinstance(fail, str):
+                r = "b" + r
+            elif PY3 and isinstance(fail, str):
+                r = "u" + r
+            yield "%s: FAIL\n" % r
+
+    def _make_file(self, fp, fails):
+        for line in self._raw_make_file(fails):
+            if isinstance(line, text_type):
+                line = line.encode("ascii")
+            fp.write(line)
+
+    def _parse_legacy_file(self, fp):
+        state = umsgpack.unpack(fp)
 
         if PY3 and b'py_version' in state:
             for key in list(state.keys()):
@@ -75,24 +152,24 @@ class ExpectationPlugin(object):
         version = state["version"]
         py_version = state["py_version"]
 
+        fails = set()
+
         if version >= 0x0200:
-            self.expect_xfail = set()
             self.config.warn("W1", "test expectation file in unsupported version")
         elif version >= 0x0100:
             xfail = state["expect_xfail"]
-            self.expect_xfail = set()
             for s in xfail:
-                self.expect_xfail.add(s)
+                fails.add(s)
                 if PY3 and py_version == 2 and isinstance(s, binary_type):
-                    self.expect_xfail.add(s.decode('latin1'))
+                    fails.add(s.decode('latin1'))
                 elif PY2 and py_version == 3 and isinstance(s, text_type):
                     try:
-                        self.expect_xfail.add(s.encode("latin1"))
+                        fails.add(s.encode("latin1"))
                     except UnicodeEncodeError:
                         pass
         else:
-            self.expect_xfail = set()
             self.config.warn("W1", "test expectation file in unsupported version")
+        return fails
 
     def pytest_collectreport(self, report):
         passed = report.outcome in ('passed', 'skipped')
@@ -117,9 +194,5 @@ class ExpectationPlugin(object):
     def pytest_sessionfinish(self, session):
         if (self.update_xfail and
                 not hasattr(session.config, 'slaveinput')):
-            state = {}
-            state["py_version"] = 2 if PY2 else 3
-            state["version"] = 0x0100
-            state["expect_xfail"] = list(self.fails)
             with open(self.xfail_file, "wb") as fp:
-                umsgpack.pack(state, fp)
+                self._make_file(fp, self.fails)
