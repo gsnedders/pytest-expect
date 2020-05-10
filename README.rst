@@ -11,6 +11,61 @@ in their node ids: this likely isn't a limitation if tests are using
 the normal Python format, as Python 2 only allows ASCII characters in
 identifiers.
 
+Installation
+------------
+.. code-block:: console
+
+   pip install pytest-expect
+
+How to use
+----------
+
+**expect file name**
+
+* Default name of the xfail-file is ``.pytest.expect``.
+* To customize the name of the xfail-file, use pytest parameter ``--xfail-file <File_Name>``.
+
+**Store the test failures to a file.**
+
+ Use ``update-xfail`` parameter. The ``.pytest.expect`` file should be created after the test session is finished.
+
+ .. code-block:: console
+
+     >> pytest -vv --update-xfail
+     . . .
+     test_one.py::test_one PASSED   [ 50%]
+     test_one.py::test_two FAILED   [100%]
+     . . .
+
+**Apply expect file to a test session**
+
+ Once, the xfail-file is created, it will be picked by the module to mark the expected failure as XFAIL. With the XFAIL failures only, the test report will turn green.
+
+ .. code-block:: console
+
+   >> pytest -vv
+   . . .
+   test_one.py::test_one PASSED   [ 50%]
+   test_one.py::test_two XFAIL    [100%]
+   . . .
+
+**Example with custom xfail-file**
+
+.. code-block:: console
+
+     >> pytest -vv --xfail-file custom_file --update-xfail
+     . . .
+     test_one.py::test_one PASSED   [ 50%]
+     test_one.py::test_two FAILED   [100%]
+     . . .
+
+     >> pytest -vv --xfail-file custom_file
+     . . .
+     test_one.py::test_one PASSED   [ 50%]
+     test_one.py::test_two XFAIL    [100%]
+     . . .
+
+
 Compatibility
 -------------
 
