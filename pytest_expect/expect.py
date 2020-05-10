@@ -42,8 +42,8 @@ def pytest_addoption(parser):
     )
 
     group.addoption(
-        "--skip-xfail",
-        action="store_true", dest="skip_xfail", default=False,
+        "--skip-xfails",
+        action="store_true", dest="skip_xfails", default=False,
         help="Skip the expected test failures"
     )
 
@@ -62,7 +62,7 @@ class ExpectationPlugin(object):
         self.config = config
         self.xfail_file = config.option.xfail_file
         self.update_xfail = config.option.update_xfail
-        self.skip_xfail = config.option.skip_xfail
+        self.skip_xfails = config.option.skip_xfails
         self.warn_on_python_xfail = config.option.warn_on_python_xfail
         self.fails = set()
         self.expect_xfail = set()
@@ -191,7 +191,7 @@ class ExpectationPlugin(object):
         if not self.update_xfail:
             for item in items:
                 if item.nodeid in self.expect_xfail:
-                    if self.skip_xfail:
+                    if self.skip_xfails:
                         item.add_marker(pytest.mark.skip)
                     else:
                         item.add_marker(pytest.mark.xfail)
