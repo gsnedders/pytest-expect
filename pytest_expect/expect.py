@@ -41,6 +41,11 @@ def pytest_addoption(parser):
         help="trigger a warning when a Python test fails"
     )
 
+    group.addoption(
+        "--skip-xfail",
+        action="store_true", dest="skip_xfail", default=False,
+        help="Skip the expected test failures"
+    )
 
 def pytest_configure(config):
     exp = ExpectationPlugin(config)
@@ -57,6 +62,7 @@ class ExpectationPlugin(object):
         self.config = config
         self.xfail_file = config.option.xfail_file
         self.update_xfail = config.option.update_xfail
+        self.skip_xfail = config.option.skip_xfail
         self.warn_on_python_xfail = config.option.warn_on_python_xfail
         self.fails = set()
         self.expect_xfail = set()
@@ -185,7 +191,10 @@ class ExpectationPlugin(object):
         if not self.update_xfail:
             for item in items:
                 if item.nodeid in self.expect_xfail:
-                    item.add_marker(pytest.mark.xfail)
+                    if self.skip_xfail:
+                        item.add_marker(pytest.mark.skip)
+                    else:
+                        item.add_marker(pytest.mark.xfail)
 
     def pytest_runtest_logreport(self, report):
         if self.update_xfail and report.failed and "xfail" not in report.keywords:
