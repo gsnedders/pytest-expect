@@ -20,16 +20,16 @@ Installation
 How to use
 ----------
 
-**expect file name**
+**Expect file name**
 
 * Default name of the xfail-file is ``.pytest.expect``.
 * To customize the name of the xfail-file, use pytest parameter ``--xfail-file <File_Name>``.
 
 **Store the test failures to a file.**
 
- Use ``update-xfail`` parameter. The ``.pytest.expect`` file should be created after the test session is finished.
+Use ``update-xfail`` parameter. The ``.pytest.expect`` file should be created after the test session is finished.
 
- .. code-block:: console
+.. code-block:: console
 
      >> pytest -vv --update-xfail
      . . .
@@ -39,9 +39,9 @@ How to use
 
 **Apply expect file to a test session**
 
- Once, the xfail-file is created, it will be picked by the module to mark the expected failure as XFAIL. With the XFAIL failures only, the test report will turn green.
+Once, the xfail-file is created, it will be picked by the module to mark the expected failure as XFAIL. With the XFAIL failures only, the test report will turn green.
 
- .. code-block:: console
+.. code-block:: console
 
    >> pytest -vv
    . . .
