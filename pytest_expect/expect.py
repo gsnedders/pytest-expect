@@ -13,7 +13,7 @@ identifiers.
 import ast
 import os.path
 import sys
-
+import warnings
 import pytest
 import umsgpack
 from six import PY2, PY3, text_type, binary_type
@@ -49,7 +49,7 @@ def pytest_configure(config):
         try:
             exp.load_expectations()
         except:
-            config.warn("W1", "failed to load expectation file")
+            warnings.warn(pytest.PytestWarning("failed to load expectation file"))
 
 
 class ExpectationPlugin(object):
@@ -155,7 +155,7 @@ class ExpectationPlugin(object):
         fails = set()
 
         if version >= 0x0200:
-            self.config.warn("W1", "test expectation file in unsupported version")
+            warnings.warn(pytest.PytestWarning("test expectation file in unsupported version"))
         elif version >= 0x0100:
             xfail = state["expect_xfail"]
             for s in xfail:
@@ -168,7 +168,7 @@ class ExpectationPlugin(object):
                     except UnicodeEncodeError:
                         pass
         else:
-            self.config.warn("W1", "test expectation file in unsupported version")
+            warnings.warn(pytest.PytestWarning("test expectation file in unsupported version"))
         return fails
 
     def pytest_collectreport(self, report):
