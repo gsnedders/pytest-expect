@@ -28,7 +28,8 @@ setup(
 
     install_requires=[
         "pytest",
-        "u-msgpack-python"
+        "six",
+        "u-msgpack-python",
     ],
 
     packages=["pytest_expect"],
